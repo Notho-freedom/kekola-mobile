@@ -1,8 +1,13 @@
 // lib/features/saisie/recap_screen.dart
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../app/theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/firebase_sync_service.dart';
+import '../../widgets/animated_gradient_button.dart';
+import '../../widgets/glassmorphism_card.dart';
+import '../../widgets/animated_kpi_card.dart';
 
 class RecapScreen extends StatefulWidget {
   final double sales;
@@ -50,10 +55,37 @@ class _RecapScreenState extends State<RecapScreen> {
         });
       }
 
+      // Synchroniser vers Firebase si la synchronisation automatique est activée
+      final syncService = FirebaseSyncService();
+      final autoSyncEnabled = await FirebaseSyncService.isAutoSyncEnabled();
+      
+      if (autoSyncEnabled) {
+        try {
+          final synced = await syncService.syncMetric(
+            date: dateStr,
+            sales: widget.sales,
+            cash: widget.cash,
+            source: 'mobile',
+          );
+          
+          if (synced && mounted) {
+            // La synchronisation a réussi, on peut afficher un message optionnel
+            print('Données synchronisées vers Firebase avec succès');
+          }
+        } catch (e) {
+          // Erreur de synchronisation Firebase - ne pas bloquer l'utilisateur
+          print('Erreur lors de la synchronisation Firebase: $e');
+        }
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Données enregistrées avec succès !'),
+          SnackBar(
+            content: Text(
+              autoSyncEnabled 
+                ? 'Données enregistrées et synchronisées avec succès !'
+                : 'Données enregistrées avec succès !',
+            ),
             backgroundColor: AppTheme.successColor,
           ),
         );
@@ -85,143 +117,215 @@ class _RecapScreenState extends State<RecapScreen> {
     final cashVariation = _deltas?['cash']?.toDouble() ?? 0.0;
 
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Récapitulatif',
-        showBackButton: false,
+        showBackButton: true,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Titre
-              Text(
-                'Récapitulatif de la saisie',
-                style: Theme.of(context).textTheme.displayMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Vérifiez vos données avant de confirmer',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-              ),
-              const SizedBox(height: 32),
-              // Carte Ventes
-              _buildDataCard(
-                context,
-                title: 'Ventes',
-                amount: '€${widget.sales.toStringAsFixed(2)}',
-                variation: salesVariation,
-                icon: Icons.trending_up,
-                color: AppTheme.successColor,
-              ),
-              const SizedBox(height: 16),
-              // Carte Cash
-              _buildDataCard(
-                context,
-                title: 'Cash',
-                amount: '€${widget.cash.toStringAsFixed(2)}',
-                variation: cashVariation,
-                icon: Icons.account_balance_wallet,
-                color: AppTheme.accentColor,
-              ),
-              const SizedBox(height: 24),
-              // Boutons d'action
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Retour à SaisieScreen pour modifier
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        side: const BorderSide(color: AppTheme.primaryColor),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF8FAFC),
+              Color(0xFFE0E7FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header moderne
+                GlassmorphismCard(
+                  padding: const EdgeInsets.all(24),
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Récapitulatif',
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                            ),
                       ),
-                      child: const Text('Modifier'),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Vérifiez vos données avant de confirmer',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _confirmAndSave,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                const SizedBox(height: 24),
+                
+                // Cartes de données modernisées
+                Row(
+                  children: [
+                    Expanded(
+                      child: AnimatedKpiCard(
+                        title: 'Ventes',
+                        value: '€${widget.sales.toStringAsFixed(2)}',
+                        icon: Icons.trending_up_rounded,
+                        gradient: AppTheme.successGradient,
+                        iconColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: AnimatedKpiCard(
+                        title: 'Cash',
+                        value: '€${widget.cash.toStringAsFixed(2)}',
+                        icon: Icons.account_balance_wallet_rounded,
+                        gradient: AppTheme.accentGradient,
+                        iconColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                if (salesVariation != 0.0 || cashVariation != 0.0) ...[
+                  const SizedBox(height: 24),
+                  GlassmorphismCard(
+                    padding: const EdgeInsets.all(20),
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Variations',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
-                            )
-                          : const Text('Confirmer'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildVariationCard(
+                                context,
+                                label: 'Ventes',
+                                variation: salesVariation,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildVariationCard(
+                                context,
+                                label: 'Cash',
+                                variation: cashVariation,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ],
+                
+                const SizedBox(height: 32),
+                
+                // Boutons d'action modernisés
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          side: const BorderSide(color: AppTheme.primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.edit, size: 20),
+                            SizedBox(width: 8),
+                            Text('Modifier'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: AnimatedGradientButton(
+                        text: 'Confirmer',
+                        icon: Icons.check_circle_rounded,
+                        isLoading: _isLoading,
+                        onPressed: _isLoading ? null : _confirmAndSave,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Widget pour afficher une carte de données
-  Widget _buildDataCard(
+  // Widget pour afficher une carte de variation
+  Widget _buildVariationCard(
     BuildContext context, {
-    required String title,
-    required String amount,
+    required String label,
     required double variation,
-    required IconData icon,
-    required Color color,
   }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 24),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              amount,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  variation >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: variation >= 0 ? AppTheme.successColor : AppTheme.errorColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${variation.abs().toStringAsFixed(1)}% par rapport à hier',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: variation >= 0 ? AppTheme.successColor : AppTheme.errorColor,
-                      ),
-                ),
-              ],
-            ),
-          ],
+    final isPositive = variation >= 0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: (isPositive ? AppTheme.successColor : AppTheme.errorColor)
+            .withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (isPositive ? AppTheme.successColor : AppTheme.errorColor)
+              .withOpacity(0.3),
+          width: 1,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                isPositive ? Icons.trending_up : Icons.trending_down,
+                color: isPositive ? AppTheme.successColor : AppTheme.errorColor,
+                size: 20,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${isPositive ? '+' : ''}${variation.toStringAsFixed(1)}%',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isPositive
+                          ? AppTheme.successColor
+                          : AppTheme.errorColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

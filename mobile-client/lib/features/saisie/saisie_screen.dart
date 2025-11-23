@@ -1,8 +1,11 @@
 // lib/features/saisie/saisie_screen.dart
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../app/theme/app_theme.dart';
 import 'recap_screen.dart';
+import '../../widgets/animated_gradient_button.dart';
+import '../../widgets/glassmorphism_card.dart';
 
 class SaisieScreen extends StatefulWidget {
   const SaisieScreen({super.key});
@@ -57,79 +60,140 @@ class _SaisieScreenState extends State<SaisieScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dateStr = '${now.day}/${now.month}/${now.year}';
+    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nouvelle saisie'),
+      appBar: const CustomAppBar(
+        title: 'Nouvelle saisie',
+        showBackButton: true,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Titre
-                Text(
-                  'Saisissez vos données',
-                  style: Theme.of(context).textTheme.displayMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Entrez les ventes et le cash du jour',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                ),
-                const SizedBox(height: 32),
-                // Champ Ventes
-                TextFormField(
-                  controller: _salesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ventes (€)',
-                    prefixIcon: Icon(Icons.trending_up),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF8FAFC),
+              Color(0xFFE0E7FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  // Header moderne
+                  GlassmorphismCard(
+                    padding: const EdgeInsets.all(24),
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.add_chart_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Nouvelle saisie',
+                                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.5,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today,
+                                        size: 14,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        dateStr,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer les ventes';
-                    }
-                    if (double.tryParse(value) == null || double.parse(value) < 0) {
-                      return 'Veuillez entrer un montant valide';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Champ Cash
-                TextFormField(
-                  controller: _cashController,
-                  decoration: const InputDecoration(
-                    labelText: 'Cash (€)',
-                    prefixIcon: Icon(Icons.account_balance_wallet),
+                  const SizedBox(height: 32),
+                  // Champ Ventes
+                  TextFormField(
+                    controller: _salesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Ventes (€)',
+                      prefixIcon: Icon(Icons.trending_up),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer les ventes';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) < 0) {
+                        return 'Veuillez entrer un montant valide';
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer le cash';
-                    }
-                    if (double.tryParse(value) == null || double.parse(value) < 0) {
-                      return 'Veuillez entrer un montant valide';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                // Bouton Valider
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
+                  const SizedBox(height: 16),
+                  // Champ Cash
+                  TextFormField(
+                    controller: _cashController,
+                    decoration: const InputDecoration(
+                      labelText: 'Cash (€)',
+                      prefixIcon: Icon(Icons.account_balance_wallet),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer le cash';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) < 0) {
+                        return 'Veuillez entrer un montant valide';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  // Bouton Valider avec animation
+                  AnimatedGradientButton(
+                    text: 'Continuer',
+                    icon: Icons.arrow_forward_rounded,
                     onPressed: _isFormValid ? _handleSubmit : null,
-                    child: const Text('Valider'),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
