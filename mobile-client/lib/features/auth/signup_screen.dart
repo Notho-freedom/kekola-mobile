@@ -1,11 +1,14 @@
 // lib/features/auth/signup_screen.dart
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../../app/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../../app/main_screen.dart';
+import '../../widgets/animated_gradient_button.dart';
+import '../../widgets/glassmorphism_card.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -117,28 +120,39 @@ class _SignupScreenState extends State<SignupScreen> {
                     alignment: Alignment.centerLeft,
                   ),
                   const SizedBox(height: 20),
-                  // Logo/Icone moderne
-                  Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                  // Logo/Icone moderne avec animation
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Center(
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.primaryGradient,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryColor.withOpacity(0.4),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 15),
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.person_add_rounded,
+                              color: Colors.white,
+                              size: 60,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.person_add_rounded,
-                        color: Colors.white,
-                        size: 50,
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 40),
                   // Titre moderne
@@ -220,49 +234,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                   const SizedBox(height: 32),
-                  // Bouton Inscription moderne
+                  // Bouton Inscription avec animation
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, _) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleSignup,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: authProvider.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'S\'inscrire',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
+                      return AnimatedGradientButton(
+                        text: 'S\'inscrire',
+                        icon: Icons.person_add_rounded,
+                        isLoading: authProvider.isLoading,
+                        onPressed: authProvider.isLoading ? null : _handleSignup,
                       );
                     },
                   ),

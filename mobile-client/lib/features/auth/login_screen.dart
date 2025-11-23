@@ -1,11 +1,14 @@
 // lib/features/auth/login_screen.dart
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../../app/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import 'signup_screen.dart';
 import '../../app/main_screen.dart';
+import '../../widgets/animated_gradient_button.dart';
+import '../../widgets/glassmorphism_card.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -78,29 +81,40 @@ Future<void> _handleLogin() async {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 40),
-                  // Logo/Icone moderne
-                  Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                  const SizedBox(height: 20),
+                  // Logo/Icone moderne avec animation
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutBack,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Center(
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.primaryGradient,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryColor.withOpacity(0.4),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 15),
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: Colors.white,
+                              size: 60,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        color: Colors.white,
-                        size: 50,
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 40),
                   // Titre moderne
@@ -167,49 +181,14 @@ Future<void> _handleLogin() async {
                   },
                 ),
                   const SizedBox(height: 32),
-                  // Bouton Connexion moderne
+                  // Bouton Connexion avec animation
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, _) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: authProvider.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Se connecter',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
+                      return AnimatedGradientButton(
+                        text: 'Se connecter',
+                        icon: Icons.login_rounded,
+                        isLoading: authProvider.isLoading,
+                        onPressed: authProvider.isLoading ? null : _handleLogin,
                       );
                     },
                   ),

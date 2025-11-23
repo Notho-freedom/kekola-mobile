@@ -2,10 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:ui';
 import 'package:namer_app/app/main_screen.dart';
 import '../../app/theme/app_theme.dart';
 import '../saisie/saisie_screen.dart';
 import '../../services/api_service.dart';
+import '../../widgets/animated_kpi_card.dart';
+import '../../widgets/animated_gradient_button.dart';
+import '../../widgets/glassmorphism_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -102,47 +106,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header moderne avec gradient
-                          Container(
+                          // Header moderne avec glassmorphism
+                          GlassmorphismCard(
                             padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              gradient: AppTheme.primaryGradient,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primaryColor.withOpacity(0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
+                            margin: EdgeInsets.zero,
+                            gradient: AppTheme.primaryGradient,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Salut, $_userName ! 👋',
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Icon(
-                                      Icons.calendar_today,
-                                      size: 16,
-                                      color: Colors.white.withOpacity(0.9),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Salut, $_userName ! 👋',
+                                            style: const TextStyle(
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                              letterSpacing: -0.5,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 4,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Icon(
+                                                  Icons.calendar_today,
+                                                  size: 14,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${today.day}/${today.month}/${today.year}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${today.day}/${today.month}/${today.year}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white.withOpacity(0.9),
-                                        fontWeight: FontWeight.w500,
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.3),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.wallet,
+                                        color: Colors.white,
+                                        size: 24,
                                       ),
                                     ),
                                   ],
@@ -151,72 +188,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          // KPI de la veille
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildKpiCard(
-                                context,
-                                title: 'Ventes hier',
-                                value: '€${_yesterdaySales.toStringAsFixed(2)}',
-                                icon: Icons.trending_up,
-                                color: AppTheme.successColor,
-                              ),
-                              _buildKpiCard(
-                                context,
-                                title: 'Cash hier',
-                                value: '€${_yesterdayCash.toStringAsFixed(2)}',
-                                icon: Icons.account_balance_wallet,
-                                color: AppTheme.accentColor,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // CTA primaire moderne
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              gradient: AppTheme.primaryGradient,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primaryColor.withOpacity(0.4),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
+                          // KPI de la veille avec animations
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                AnimatedKpiCard(
+                                  title: 'Ventes hier',
+                                  value: '€${_yesterdaySales.toStringAsFixed(2)}',
+                                  icon: Icons.trending_up_rounded,
+                                  gradient: AppTheme.successGradient,
+                                  onTap: () {},
+                                ),
+                                AnimatedKpiCard(
+                                  title: 'Cash hier',
+                                  value: '€${_yesterdayCash.toStringAsFixed(2)}',
+                                  icon: Icons.account_balance_wallet_rounded,
+                                  gradient: AppTheme.accentGradient,
+                                  onTap: () {},
                                 ),
                               ],
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const SaisieScreen()),
-                                ).then((_) => _loadDashboardData());
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add_circle_outline, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Nouvelle saisie',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // CTA primaire avec animation
+                          AnimatedGradientButton(
+                            text: 'Nouvelle saisie',
+                            icon: Icons.add_circle_outline,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const SaisieScreen()),
+                              ).then((_) => _loadDashboardData());
+                            },
                           ),
                           const SizedBox(height: 24),
                           // Mini-graphique (LineChart) moderne
@@ -258,25 +262,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          Container(
-                            height: 140,
-                            decoration: BoxDecoration(
-                              color: AppTheme.surfaceColor,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.grey.shade100),
-                            ),
-                            padding: const EdgeInsets.all(16),
+                          GlassmorphismCard(
+                            height: 180,
+                            margin: EdgeInsets.zero,
+                            padding: const EdgeInsets.all(20),
                             child: _salesData.isEmpty
                                 ? Center(
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                          Icons.show_chart,
-                                          size: 48,
-                                          color: Colors.grey.shade300,
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade100,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.show_chart,
+                                            size: 32,
+                                            color: Colors.grey.shade400,
+                                          ),
                                         ),
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 12),
                                         Text(
                                           'Aucune donnée disponible',
                                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -316,9 +323,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             show: true,
                                             getDotPainter: (spot, percent, barData, index) {
                                               return FlDotCirclePainter(
-                                                radius: 4,
+                                                radius: 5,
                                                 color: AppTheme.successColor,
-                                                strokeWidth: 2,
+                                                strokeWidth: 3,
                                                 strokeColor: Colors.white,
                                               );
                                             },
@@ -329,7 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
                                               colors: [
-                                                AppTheme.successColor.withOpacity(0.3),
+                                                AppTheme.successColor.withOpacity(0.4),
                                                 AppTheme.successColor.withOpacity(0.05),
                                               ],
                                             ),
@@ -368,67 +375,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Widget pour une carte KPI moderne
-  Widget _buildKpiCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    final isSuccess = color == AppTheme.successColor;
-    final gradient = isSuccess ? AppTheme.successGradient : AppTheme.accentGradient;
-    
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
