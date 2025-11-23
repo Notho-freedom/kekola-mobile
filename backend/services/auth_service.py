@@ -49,21 +49,21 @@ def authenticate_user(db: Session, email: str, password: str):
         return None
     return user
 
-# Crée access token - JWT 24h (section 8).
+# Crée access token - JWT 7 jours (persistance agressive).
 def create_access_token(data: dict):
     # Copie data pour éviter mutation.
     to_encode = data.copy()
-    # Set expiration à 24h.
-    expire = datetime.utcnow() + timedelta(hours=24)
+    # Set expiration à 7 jours pour persistance agressive.
+    expire = datetime.utcnow() + timedelta(days=7)
     # Ajoute exp dans payload.
     to_encode.update({"exp": expire})
     # Encode en JWT.
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Crée refresh token - 30j.
+# Crée refresh token - 90 jours (persistance agressive).
 def create_refresh_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=30)
+    expire = datetime.utcnow() + timedelta(days=90)  # 3 mois pour persistance agressive
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

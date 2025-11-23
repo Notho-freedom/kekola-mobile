@@ -45,7 +45,7 @@ orjson==3.11.3
 passlib==1.7.4
 proto-plus==1.26.1
 protobuf==6.32.1
-psycopg2-binary==2.9.10
+# psycopg2-binary retiré - utilisation de SQLite locale maintenant
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.23

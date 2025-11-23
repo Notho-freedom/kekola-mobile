@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../app/theme/app_theme.dart';
+import '../../services/api_service.dart';
 
 class HistoriqueScreen extends StatefulWidget {
   const HistoriqueScreen({super.key});
@@ -14,50 +15,91 @@ class _HistoriqueScreenState extends State<HistoriqueScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _filter = 'Tous'; // Filtres possibles : 'Tous', 'Semaine', 'Mois'
+  List<dynamic> _allTransactions = [];
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    // Simuler un chargement de données (ex. : depuis une base locale)
-    Future.delayed(const Duration(seconds: 1), () {
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Charger plus de données pour avoir l'historique complet
+      final metrics = await ApiService.getMetrics(range: '90d'); // 90 jours
       setState(() {
+        _allTransactions = metrics;
         _isLoading = false;
       });
-    });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   // Filtrer et chercher dans les transactions
-  List<Map<String, dynamic>> _filteredTransactions(List<Map<String, dynamic>> all) {
-    var filtered = all.where((t) {
+  List<dynamic> _filteredTransactions() {
+    var filtered = _allTransactions.where((t) {
       if (_filter == 'Semaine') {
-        // Simuler filtre dernière semaine (basé sur dates récentes)
-        return int.parse(t['date'].split('/')[0]) >= 22; // Ex. : jours >= 22
+        // Filtre dernière semaine
+        final date = DateTime.parse(t['date']);
+        final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+        return date.isAfter(weekAgo);
       } else if (_filter == 'Mois') {
-        // Simuler filtre dernier mois
-        return int.parse(t['date'].split('/')[1]) == 9; // Ex. : septembre
+        // Filtre dernier mois
+        final date = DateTime.parse(t['date']);
+        final monthAgo = DateTime.now().subtract(const Duration(days: 30));
+        return date.isAfter(monthAgo);
       }
       return true;
     }).toList();
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((t) {
-        return t['date'].contains(_searchQuery) ||
-            t['sales'].toString().contains(_searchQuery) ||
-            t['cash'].toString().contains(_searchQuery);
+        final dateStr = t['date']?.toString() ?? '';
+        final salesStr = t['sales']?.toString() ?? '';
+        final cashStr = t['cash']?.toString() ?? '';
+        return dateStr.contains(_searchQuery) ||
+            salesStr.contains(_searchQuery) ||
+            cashStr.contains(_searchQuery);
       }).toList();
     }
 
-    return filtered;
+    return filtered.toList();
   }
 
   // Afficher les détails d'une transaction
-  void _showTransactionDetails(Map<String, dynamic> transaction) {
+  void _showTransactionDetails(dynamic transaction) {
+    final date = transaction['date'] ?? '';
+    final sales = (transaction['sales'] ?? 0.0).toDouble();
+    final cash = (transaction['cash'] ?? 0.0).toDouble();
+    final deltas = transaction['deltas'] ?? {};
+    final salesDelta = (deltas['sales'] ?? 0.0).toDouble();
+    final cashDelta = (deltas['cash'] ?? 0.0).toDouble();
+
+    // Formater la date
+    String formattedDate = date;
+    try {
+      final dateObj = DateTime.parse(date);
+      formattedDate = '${dateObj.day}/${dateObj.month}/${dateObj.year}';
+    } catch (e) {
+      // Garder la date originale si le parsing échoue
+    }
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text(
-            'Détails de la transaction du ${transaction['date']}',
+            'Détails de la transaction du $formattedDate',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           content: Column(
@@ -65,33 +107,32 @@ class _HistoriqueScreenState extends State<HistoriqueScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Ventes : €${transaction['sales'].toStringAsFixed(2)}',
+                'Ventes : €${sales.toStringAsFixed(2)}',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.successColor,
                     ),
               ),
               Text(
-                'Cash : €${transaction['cash'].toStringAsFixed(2)}',
+                'Cash : €${cash.toStringAsFixed(2)}',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.accentColor,
                     ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Variation ventes : +5% (simulée)',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              Text(
-                'Variation cash : -2% (simulée)',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Notes : Aucune note ajoutée.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-              ),
+              if (deltas.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Variation ventes : ${salesDelta >= 0 ? '+' : ''}${salesDelta.toStringAsFixed(1)}%',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: salesDelta >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                      ),
+                ),
+                Text(
+                  'Variation cash : ${cashDelta >= 0 ? '+' : ''}${cashDelta.toStringAsFixed(1)}%',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: cashDelta >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                      ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -107,20 +148,7 @@ class _HistoriqueScreenState extends State<HistoriqueScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Données simulées pour l'historique
-    final List<Map<String, dynamic>> transactions = [
-      {'date': '27/09/2025', 'sales': 1300.0, 'cash': 1000.0},
-      {'date': '26/09/2025', 'sales': 1350.0, 'cash': 1020.0},
-      {'date': '25/09/2025', 'sales': 1250.0, 'cash': 980.0},
-      {'date': '24/09/2025', 'sales': 1400.0, 'cash': 1050.0},
-      {'date': '23/09/2025', 'sales': 1100.0, 'cash': 900.0},
-      {'date': '22/09/2025', 'sales': 1200.0, 'cash': 950.0},
-      {'date': '21/09/2025', 'sales': 1300.0, 'cash': 1000.0},
-      {'date': '20/09/2025', 'sales': 1150.0, 'cash': 920.0},
-      {'date': '15/08/2025', 'sales': 1000.0, 'cash': 800.0}, // Pour tester filtre mois
-    ];
-
-    final filtered = _filteredTransactions(transactions);
+    final filtered = _filteredTransactions();
 
     return Scaffold(
       appBar: CustomAppBar(title: 'Historique', showBackButton: false),
@@ -194,51 +222,87 @@ class _HistoriqueScreenState extends State<HistoriqueScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                         ),
                       )
-                    : filtered.isEmpty
+                    : _error != null
                         ? Center(
-                            child: Text(
-                              'Aucune transaction trouvée.',
-                              style: Theme.of(context).textTheme.bodyLarge,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Erreur: $_error',
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: AppTheme.errorColor,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _loadTransactions,
+                                  child: const Text('Réessayer'),
+                                ),
+                              ],
                             ),
                           )
-                        : ListView.builder(
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final transaction = filtered[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                                child: ListTile(
-                                  leading: const Icon(
-                                    Icons.history,
-                                    color: AppTheme.primaryColor,
-                                    size: 30,
-                                  ),
-                                  title: Text(
-                                    transaction['date'],
-                                    style: Theme.of(context).textTheme.bodyLarge,
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Ventes : €${transaction['sales'].toStringAsFixed(2)}',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: AppTheme.successColor,
-                                            ),
-                                      ),
-                                      Text(
-                                        'Cash : €${transaction['cash'].toStringAsFixed(2)}',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: AppTheme.accentColor,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () => _showTransactionDetails(transaction),
+                        : filtered.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Aucune transaction trouvée.',
+                                  style: Theme.of(context).textTheme.bodyLarge,
                                 ),
-                              );
-                            },
-                          ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _loadTransactions,
+                                child: ListView.builder(
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final transaction = filtered[index];
+                                    final date = transaction['date'] ?? '';
+                                    final sales = (transaction['sales'] ?? 0.0).toDouble();
+                                    final cash = (transaction['cash'] ?? 0.0).toDouble();
+                                    
+                                    // Formater la date
+                                    String formattedDate = date;
+                                    try {
+                                      final dateObj = DateTime.parse(date);
+                                      formattedDate = '${dateObj.day}/${dateObj.month}/${dateObj.year}';
+                                    } catch (e) {
+                                      // Garder la date originale
+                                    }
+                                    
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                                      child: ListTile(
+                                        leading: const Icon(
+                                          Icons.history,
+                                          color: AppTheme.primaryColor,
+                                          size: 30,
+                                        ),
+                                        title: Text(
+                                          formattedDate,
+                                          style: Theme.of(context).textTheme.bodyLarge,
+                                        ),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Ventes : €${sales.toStringAsFixed(2)}',
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: AppTheme.successColor,
+                                                  ),
+                                            ),
+                                            Text(
+                                              'Cash : €${cash.toStringAsFixed(2)}',
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    color: AppTheme.accentColor,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                        onTap: () => _showTransactionDetails(transaction),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
               ),
             ],
           ),

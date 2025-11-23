@@ -10,23 +10,38 @@ from datetime import datetime, timedelta
 
 # Crée metric - stocke en DB.
 def create_metric(db: Session, metric: MetricCreate, user_id: int):
-    # Crée objet DailyMetric depuis schéma.
-    db_metric = DailyMetric(**metric.dict(), user_id=user_id)
-    # Ajoute à DB.
-    db.add(db_metric)
-    db.commit()
-    db.refresh(db_metric)
-    return db_metric
+    try:
+        # Crée objet DailyMetric depuis schéma.
+        db_metric = DailyMetric(**metric.dict(), user_id=user_id)
+        # Ajoute à DB.
+        db.add(db_metric)
+        db.commit()
+        db.refresh(db_metric)
+        return db_metric
+    except Exception as e:
+        # En cas d'erreur (ex: contrainte d'unicité), rollback
+        db.rollback()
+        raise e
 
 # Get metrics - pour un user et range (e.g., 10d).
-def get_metrics(db: Session, user_id: int, range_days: int):
-    # Calcule date de début.
-    start = datetime.now() - timedelta(days=range_days)
-    # Query pour metrics dans range.
-    return db.query(DailyMetric).filter(
-        DailyMetric.user_id == user_id,
-        DailyMetric.date >= start.strftime("%Y-%m-%d")
-    ).all()
+def get_metrics(db: Session, user_id: int, range_days: int = None, start_date: str = None, end_date: str = None):
+    query = db.query(DailyMetric).filter(DailyMetric.user_id == user_id)
+    
+    # Si range_days est fourni, utiliser cette logique
+    if range_days is not None:
+        start = datetime.now() - timedelta(days=range_days)
+        query = query.filter(DailyMetric.date >= start.strftime("%Y-%m-%d"))
+    
+    # Si start_date est fourni
+    if start_date:
+        query = query.filter(DailyMetric.date >= start_date)
+    
+    # Si end_date est fourni
+    if end_date:
+        query = query.filter(DailyMetric.date <= end_date)
+    
+    # Trier par date décroissante
+    return query.order_by(DailyMetric.date.desc()).all()
 
 
 # Get insights - calcule % vs J-1.

@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 # Importe schémas et services.
 from schemas.auth_schemas import Login, Token, Register, FCMToken
-from services.auth_service import authenticate_user, create_access_token, create_refresh_token, create_user, get_current_user
+from services.auth_service import authenticate_user, create_access_token, create_refresh_token, create_user, get_current_user, get_user_by_email
 # Importe get_db.
 from models.database import get_db
 
@@ -46,10 +46,18 @@ def refresh(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     refresh_token = create_refresh_token({"sub": user.email})
     return {"access_token": access_token, "refresh_token": refresh_token}
 
-@router.post("/register")
+@router.post("/register", response_model=Token)
 def register(register: Register, db: Session = Depends(get_db)):
+    # Vérifier si l'utilisateur existe déjà
+    existing_user = get_user_by_email(db, register.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     user = create_user(db, register.email, register.password, register.name)
-    return {"message": f"User {user.email} created"}
+    # Créer et retourner les tokens pour connecter automatiquement
+    access_token = create_access_token({"sub": user.email})
+    refresh_token = create_refresh_token({"sub": user.email})
+    return {"access_token": access_token, "refresh_token": refresh_token}
 
 @router.post("/set-fcm-token")
 async def set_fcm_token(fcm: FCMToken, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):

@@ -2,20 +2,87 @@
 
 import 'package:flutter/material.dart';
 import '../../app/theme/app_theme.dart';
+import '../../services/api_service.dart';
 
-class RecapScreen extends StatelessWidget {
+class RecapScreen extends StatefulWidget {
   final double sales;
   final double cash;
 
   const RecapScreen({super.key, required this.sales, required this.cash});
 
   @override
+  State<RecapScreen> createState() => _RecapScreenState();
+}
+
+class _RecapScreenState extends State<RecapScreen> {
+  bool _isLoading = false;
+  Map<String, dynamic>? _deltas;
+
+  @override
+  void initState() {
+    super.initState();
+    // Les deltas seront calculés par le backend lors de la sauvegarde
+    _deltas = {'sales': 0.0, 'cash': 0.0};
+  }
+
+  // Sauvegarde la métrique via l'API
+  Future<void> _confirmAndSave() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Format de date ISO (YYYY-MM-DD)
+      final now = DateTime.now();
+      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Créer la métrique via l'API
+      final result = await ApiService.createMetric(
+        date: dateStr,
+        sales: widget.sales,
+        cash: widget.cash,
+      );
+
+      // Récupérer les deltas depuis la réponse
+      if (result['deltas'] != null) {
+        setState(() {
+          _deltas = Map<String, dynamic>.from(result['deltas']);
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Données enregistrées avec succès !'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+        // Retourner au dashboard
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString().replaceFirst('Exception: ', '')}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Données simulées pour les variations
-    const double previousSales = 1200.00; // Ventes de la veille
-    const double previousCash = 950.00; // Cash de la veille
-    final double salesVariation = ((sales - previousSales) / previousSales * 100);
-    final double cashVariation = ((cash - previousCash) / previousCash * 100);
+    // Utiliser les deltas de l'API si disponibles, sinon 0
+    final salesVariation = _deltas?['sales']?.toDouble() ?? 0.0;
+    final cashVariation = _deltas?['cash']?.toDouble() ?? 0.0;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -46,7 +113,7 @@ class RecapScreen extends StatelessWidget {
               _buildDataCard(
                 context,
                 title: 'Ventes',
-                amount: '€${sales.toStringAsFixed(2)}',
+                amount: '€${widget.sales.toStringAsFixed(2)}',
                 variation: salesVariation,
                 icon: Icons.trending_up,
                 color: AppTheme.successColor,
@@ -56,7 +123,7 @@ class RecapScreen extends StatelessWidget {
               _buildDataCard(
                 context,
                 title: 'Cash',
-                amount: '€${cash.toStringAsFixed(2)}',
+                amount: '€${widget.cash.toStringAsFixed(2)}',
                 variation: cashVariation,
                 icon: Icons.account_balance_wallet,
                 color: AppTheme.accentColor,
@@ -81,15 +148,17 @@ class RecapScreen extends StatelessWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Simuler la sauvegarde et retourner au Dashboard
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Données enregistrées !')),
-                        );
-                       Navigator.popUntil(context, (route) => route.isFirst);
-;
-                      },
-                      child: const Text('Confirmer'),
+                      onPressed: _isLoading ? null : _confirmAndSave,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text('Confirmer'),
                     ),
                   ),
                 ],

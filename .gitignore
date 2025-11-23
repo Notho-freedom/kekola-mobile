@@ -15,3 +15,17 @@ ios/Pods/
 # System
 .DS_Store
 Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# Python Virtual Environment
+backend/venv/
+venv/
+ENV/
+env/

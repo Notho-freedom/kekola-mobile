@@ -1,11 +1,11 @@
 // lib/features/auth/login_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme/app_theme.dart';
-// À créer comme stub
+import '../../providers/auth_provider.dart';
 import 'signup_screen.dart';
 import '../../app/main_screen.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -27,22 +26,33 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Simule une connexion (à remplacer par une vraie logique d'authentification)
+  // Connexion avec l'API backend
 Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-      // Simulation d'une requête réseau (2s)
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() {
-        _isLoading = false;
-      });
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        if (success) {
       // Naviguer vers MainScreen après connexion réussie
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
+        } else {
+          // Afficher l'erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Erreur de connexion'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -82,11 +92,19 @@ Future<void> _handleLogin() async {
                     prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre e-mail';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    // Nettoyer l'email (enlever les espaces)
+                    final email = value.trim();
+                    if (email.isEmpty) {
+                      return 'Veuillez entrer votre e-mail';
+                    }
+                    // Vérification simple : doit contenir @ et au moins un point après
+                    if (!email.contains('@') || !email.contains('.') || email.indexOf('@') >= email.lastIndexOf('.')) {
                       return 'E-mail invalide';
                     }
                     return null;
@@ -113,16 +131,20 @@ Future<void> _handleLogin() async {
                 ),
                 const SizedBox(height: 24),
                 // Bouton Connexion
-                SizedBox(
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    child: _isLoading
+                        onPressed: authProvider.isLoading ? null : _handleLogin,
+                        child: authProvider.isLoading
                         ? const CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           )
                         : const Text('Se connecter'),
                   ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 // Lien vers Inscription

@@ -1,8 +1,11 @@
 // lib/features/auth/signup_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import 'login_screen.dart';
+import '../../app/main_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,7 +19,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -26,22 +28,48 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // Simule une inscription (à remplacer par une vraie logique d'authentification)
+  // Inscription avec l'API backend
   Future<void> _handleSignup() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-      // Simulation d'une requête réseau (2s)
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() {
-        _isLoading = false;
-      });
-      // Naviguer vers l'écran de connexion après inscription
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final success = await authProvider.register(
+        _emailController.text.trim(),
+        _passwordController.text,
+        _nameController.text.trim(),
       );
+
+      if (mounted) {
+        if (success) {
+          // Si l'inscription réussit et que l'utilisateur est connecté, aller au MainScreen
+          if (authProvider.isAuthenticated) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScreen()),
+            );
+          } else {
+            // Sinon, aller à l'écran de connexion
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Inscription réussie ! Vous pouvez maintenant vous connecter.'),
+                backgroundColor: AppTheme.successColor,
+              ),
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+          }
+        } else {
+          // Afficher l'erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Erreur d\'inscription'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -96,11 +124,19 @@ class _SignupScreenState extends State<SignupScreen> {
                     prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre e-mail';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    // Nettoyer l'email (enlever les espaces)
+                    final email = value.trim();
+                    if (email.isEmpty) {
+                      return 'Veuillez entrer votre e-mail';
+                    }
+                    // Vérification simple : doit contenir @ et au moins un point après
+                    if (!email.contains('@') || !email.contains('.') || email.indexOf('@') >= email.lastIndexOf('.')) {
                       return 'E-mail invalide';
                     }
                     return null;
@@ -127,16 +163,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 24),
                 // Bouton Inscription
-                SizedBox(
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, _) {
+                    return SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignup,
-                    child: _isLoading
+                        onPressed: authProvider.isLoading ? null : _handleSignup,
+                        child: authProvider.isLoading
                         ? const CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           )
                         : const Text('S\'inscrire'),
                   ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 // Lien vers Connexion

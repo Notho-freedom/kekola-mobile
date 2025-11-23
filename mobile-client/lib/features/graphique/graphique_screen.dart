@@ -3,26 +3,96 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../app/theme/app_theme.dart';
+import '../../services/api_service.dart';
 
-class GraphiquesScreen extends StatelessWidget {
+class GraphiquesScreen extends StatefulWidget {
   const GraphiquesScreen({super.key});
 
   @override
+  State<GraphiquesScreen> createState() => _GraphiquesScreenState();
+}
+
+class _GraphiquesScreenState extends State<GraphiquesScreen> {
+  bool _isLoading = true;
+  List<double> _weeklySales = [];
+  List<double> _weeklyCash = [];
+  double _totalSales = 0.0;
+  double _totalCash = 0.0;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGraphData();
+  }
+
+  Future<void> _loadGraphData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final graphData = await ApiService.getGraphData();
+      setState(() {
+        _weeklySales = List<double>.from(
+          (graphData['weeklySales'] ?? []).map((e) => e.toDouble())
+        );
+        _weeklyCash = List<double>.from(
+          (graphData['weeklyCash'] ?? []).map((e) => e.toDouble())
+        );
+        _totalSales = (graphData['totalSales'] ?? 0.0).toDouble();
+        _totalCash = (graphData['totalCash'] ?? 0.0).toDouble();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Données simulées pour les graphiques avancés
-    final List<double> weeklySales = [8500, 8200, 7900]; // 3 semaines
-    final List<double> weeklyCash = [6800, 6500, 6200];
-    final double totalSales = weeklySales.reduce((a, b) => a + b);
-    final double totalCash = weeklyCash.reduce((a, b) => a + b);
 
     return Scaffold(
       appBar: CustomAppBar(title: 'Graphiques avancés', showBackButton: false),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
+              )
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Erreur: $_error',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: AppTheme.errorColor,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadGraphData,
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadGraphData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
               // Titre
               Text(
                 'Analyses visuelles avancées',
@@ -44,30 +114,32 @@ class GraphiquesScreen extends StatelessWidget {
                   height: 200,
                   child: PieChart(
                     PieChartData(
-                      sections: [
-                        PieChartSectionData(
-                          color: AppTheme.successColor,
-                          value: totalSales,
-                          title: '${(totalSales / (totalSales + totalCash) * 100).toStringAsFixed(1)}%',
-                          radius: 60,
-                          titleStyle: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        PieChartSectionData(
-                          color: AppTheme.accentColor,
-                          value: totalCash,
-                          title: '${(totalCash / (totalSales + totalCash) * 100).toStringAsFixed(1)}%',
-                          radius: 60,
-                          titleStyle: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
+                      sections: _totalSales == 0 && _totalCash == 0
+                          ? []
+                          : [
+                              PieChartSectionData(
+                                color: AppTheme.successColor,
+                                value: _totalSales,
+                                title: '${(_totalSales / (_totalSales + _totalCash) * 100).toStringAsFixed(1)}%',
+                                radius: 60,
+                                titleStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              PieChartSectionData(
+                                color: AppTheme.accentColor,
+                                value: _totalCash,
+                                title: '${(_totalCash / (_totalSales + _totalCash) * 100).toStringAsFixed(1)}%',
+                                radius: 60,
+                                titleStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                       sectionsSpace: 2,
                       centerSpaceRadius: 40,
                     ),
@@ -113,35 +185,40 @@ class GraphiquesScreen extends StatelessWidget {
                         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                       borderData: FlBorderData(show: false),
-                      barGroups: List.generate(3, (index) {
-                        return BarChartGroupData(
-                          x: index,
-                          barRods: [
-                            BarChartRodData(
-                              toY: weeklySales[index],
-                              color: AppTheme.successColor,
-                              width: 12,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            BarChartRodData(
-                              toY: weeklyCash[index],
-                              color: AppTheme.accentColor,
-                              width: 12,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ],
-                          barsSpace: 4,
-                        );
-                      }),
+                      barGroups: _weeklySales.isEmpty
+                          ? []
+                          : List.generate(_weeklySales.length, (index) {
+                              return BarChartGroupData(
+                                x: index,
+                                barRods: [
+                                  BarChartRodData(
+                                    toY: _weeklySales[index],
+                                    color: AppTheme.successColor,
+                                    width: 12,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  BarChartRodData(
+                                    toY: _weeklyCash[index],
+                                    color: AppTheme.accentColor,
+                                    width: 12,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ],
+                                barsSpace: 4,
+                              );
+                            }),
                       minY: 0,
-                      maxY: 9000, // Ajuster selon les données
+                      maxY: _weeklySales.isEmpty 
+                          ? 9000.0 
+                          : ([..._weeklySales, ..._weeklyCash].reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+                        ],
+                      ),
+                    ),
+                  ),
       ),
     );
   }

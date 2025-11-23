@@ -1,8 +1,12 @@
 // lib/app/app.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'package:namer_app/features/onboarding/onboarding_screen.dart';
+import '../providers/auth_provider.dart';
+import '../app/main_screen.dart';
+import '../features/auth/login_screen.dart';
 
 
 class CommercantApp extends StatelessWidget {
@@ -20,7 +24,7 @@ class CommercantApp extends StatelessWidget {
   }
 }
 
-// Écran de splash temporaire - sera remplacé par la logique d'authentification
+// Écran de splash avec vérification d'authentification
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -32,12 +36,32 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Simulation du chargement initial
-    Future.delayed(const Duration(seconds: 2), () {
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Attendre un peu pour l'animation
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (!mounted) return;
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Attendre que la vérification d'authentification soit terminée
+    await authProvider.checkAuthStatus();
+    
+    if (!mounted) return;
+    
+    // Naviguer selon l'état d'authentification
+    if (authProvider.isAuthenticated) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+      );
+    } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
-    });
+    }
   }
 
   @override

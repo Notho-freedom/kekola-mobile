@@ -3,23 +3,108 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../app/theme/app_theme.dart';
+import '../../services/api_service.dart';
 
-class InsightsScreen extends StatelessWidget {
+class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Données simulées pour les graphiques et KPI
-    final List<double> salesData = [1200, 1300, 1100, 1400, 1250, 1350, 1300]; // 7 jours
-    final List<double> cashData = [950, 1000, 900, 1050, 980, 1020, 1000];
-    const double lastWeekSales = 8200; // Total semaine précédente
-    const double lastWeekCash = 6500;
+  State<InsightsScreen> createState() => _InsightsScreenState();
+}
 
-    // Calcul des KPI
-    final double totalSales = salesData.reduce((a, b) => a + b);
-    final double totalCash = cashData.reduce((a, b) => a + b);
-    final double salesVariation = ((totalSales - lastWeekSales) / lastWeekSales * 100);
-    final double cashVariation = ((totalCash - lastWeekCash) / lastWeekCash * 100);
+class _InsightsScreenState extends State<InsightsScreen> {
+  bool _isLoading = true;
+  List<double> _salesData = [];
+  List<double> _cashData = [];
+  double _totalSales = 0.0;
+  double _totalCash = 0.0;
+  double _salesVariation = 0.0;
+  double _cashVariation = 0.0;
+  List<dynamic> _recentHistory = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsightsData();
+  }
+
+  Future<void> _loadInsightsData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Charger les stats du dashboard pour les 7 derniers jours
+      final dashboardStats = await ApiService.getDashboardStats();
+      final salesData = List<double>.from(
+        (dashboardStats['salesData'] ?? []).map((e) => e.toDouble())
+      );
+      final cashData = List<double>.from(
+        (dashboardStats['cashData'] ?? []).map((e) => e.toDouble())
+      );
+
+      // Charger les métriques pour calculer les variations
+      final metrics = await ApiService.getMetrics(range: '14d');
+      
+      // Calculer les totaux de cette semaine et la semaine dernière
+      final now = DateTime.now();
+      final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
+      final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
+      final lastWeekEnd = thisWeekStart;
+
+      double thisWeekSales = 0.0;
+      double thisWeekCash = 0.0;
+      double lastWeekSales = 0.0;
+      double lastWeekCash = 0.0;
+
+      for (var metric in metrics) {
+        final date = DateTime.parse(metric['date']);
+        final sales = (metric['sales'] ?? 0.0).toDouble();
+        final cash = (metric['cash'] ?? 0.0).toDouble();
+
+        if (date.isAfter(thisWeekStart.subtract(const Duration(days: 1)))) {
+          thisWeekSales += sales;
+          thisWeekCash += cash;
+        } else if (date.isAfter(lastWeekStart.subtract(const Duration(days: 1))) && 
+                   date.isBefore(lastWeekEnd)) {
+          lastWeekSales += sales;
+          lastWeekCash += cash;
+        }
+      }
+
+      // Calculer les variations
+      final salesVariation = lastWeekSales > 0 
+          ? ((thisWeekSales - lastWeekSales) / lastWeekSales * 100)
+          : 0.0;
+      final cashVariation = lastWeekCash > 0
+          ? ((thisWeekCash - lastWeekCash) / lastWeekCash * 100)
+          : 0.0;
+
+      // Récupérer l'historique récent (3 dernières entrées)
+      final recentHistory = metrics.take(3).toList();
+
+      setState(() {
+        _salesData = salesData;
+        _cashData = cashData;
+        _totalSales = thisWeekSales;
+        _totalCash = thisWeekCash;
+        _salesVariation = salesVariation;
+        _cashVariation = cashVariation;
+        _recentHistory = recentHistory;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -27,11 +112,40 @@ class InsightsScreen extends StatelessWidget {
         showBackButton: false,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
+              )
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Erreur: $_error',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: AppTheme.errorColor,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadInsightsData,
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadInsightsData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
               // Titre
               Text(
                 'Vos performances',
@@ -85,7 +199,7 @@ class InsightsScreen extends StatelessWidget {
                       borderData: FlBorderData(show: false),
                       lineBarsData: [
                         LineChartBarData(
-                          spots: salesData
+                          spots: _salesData
                               .asMap()
                               .entries
                               .map((e) => FlSpot(e.key.toDouble(), e.value))
@@ -101,7 +215,9 @@ class InsightsScreen extends StatelessWidget {
                         ),
                       ],
                       minY: 0,
-                      maxY: 1500, // Ajuster selon les données
+                      maxY: _salesData.isEmpty 
+                          ? 1500.0 
+                          : (_salesData.reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity),
                     ),
                   ),
                 ),
@@ -145,7 +261,7 @@ class InsightsScreen extends StatelessWidget {
                         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                       borderData: FlBorderData(show: false),
-                      barGroups: cashData
+                      barGroups: _cashData
                           .asMap()
                           .entries
                           .map(
@@ -163,7 +279,9 @@ class InsightsScreen extends StatelessWidget {
                           )
                           .toList(),
                       minY: 0,
-                      maxY: 1200, // Ajuster selon les données
+                      maxY: _cashData.isEmpty 
+                          ? 1200.0 
+                          : (_cashData.reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity),
                     ),
                   ),
                 ),
@@ -181,15 +299,15 @@ class InsightsScreen extends StatelessWidget {
                   _buildKpiCard(
                     context,
                     title: 'Ventes totales',
-                    value: '€${totalSales.toStringAsFixed(2)}',
-                    variation: salesVariation,
+                    value: '€${_totalSales.toStringAsFixed(2)}',
+                    variation: _salesVariation,
                     color: AppTheme.successColor,
                   ),
                   _buildKpiCard(
                     context,
                     title: 'Cash total',
-                    value: '€${totalCash.toStringAsFixed(2)}',
-                    variation: cashVariation,
+                    value: '€${_totalCash.toStringAsFixed(2)}',
+                    variation: _cashVariation,
                     color: AppTheme.accentColor,
                   ),
                 ],
@@ -205,6 +323,7 @@ class InsightsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -282,27 +401,44 @@ class InsightsScreen extends StatelessWidget {
 
   // Widget pour la liste historique condensée
   Widget _buildHistoryList(BuildContext context) {
-    // Données simulées
-    final List<Map<String, dynamic>> history = [
-      {'date': '27/09/2025', 'sales': 1300.0, 'cash': 1000.0},
-      {'date': '26/09/2025', 'sales': 1350.0, 'cash': 1020.0},
-      {'date': '25/09/2025', 'sales': 1250.0, 'cash': 980.0},
-    ];
+    if (_recentHistory.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun historique disponible',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+        ),
+      );
+    }
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: history.length,
+      itemCount: _recentHistory.length,
       itemBuilder: (context, index) {
-        final item = history[index];
+        final item = _recentHistory[index];
+        final date = item['date'] ?? '';
+        final sales = (item['sales'] ?? 0.0).toDouble();
+        final cash = (item['cash'] ?? 0.0).toDouble();
+        
+        // Formater la date
+        String formattedDate = date;
+        try {
+          final dateObj = DateTime.parse(date);
+          formattedDate = '${dateObj.day}/${dateObj.month}/${dateObj.year}';
+        } catch (e) {
+          // Garder la date originale
+        }
+        
         return ListTile(
           leading: const Icon(Icons.history, color: AppTheme.primaryColor),
           title: Text(
-            item['date'],
+            formattedDate,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           subtitle: Text(
-            'Ventes: €${item['sales'].toStringAsFixed(2)} | Cash: €${item['cash'].toStringAsFixed(2)}',
+            'Ventes: €${sales.toStringAsFixed(2)} | Cash: €${cash.toStringAsFixed(2)}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.textSecondary,
                 ),

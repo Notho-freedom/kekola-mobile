@@ -5,11 +5,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# URL de la DB codée en dur - utilise SQLite dans le dossier projet.
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:lagrange@localhost:5432/compta_db")
-#DATABASE_URL="postgresql://compta_db_d76h_user:nrxOfBEBar74usWLnYivVxViTLUCz5u8@dpg-d3ba0mndiees73aheih0-a.oregon-postgres.render.com/compta_db_d76h"
-# Crée moteur DB - connecte à la base.
-engine = create_engine(DATABASE_URL)
+# URL de la DB - utilise SQLite locale dans le dossier backend.
+# Le fichier sera créé automatiquement s'il n'existe pas.
+DB_FILE = os.getenv("DB_FILE", "compta.db")
+DATABASE_URL = f"sqlite:///./{DB_FILE}"
+
+# Crée moteur DB - connecte à la base SQLite.
+# check_same_thread=False permet à SQLite de fonctionner avec FastAPI (multi-thread).
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    echo=False  # Mettre à True pour voir les requêtes SQL dans les logs
+)
 
 # Crée factory pour sessions.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

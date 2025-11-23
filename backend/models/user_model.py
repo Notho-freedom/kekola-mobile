@@ -28,3 +28,5 @@ class User(Base):
     
     # Relation avec DailyMetric - un user a plusieurs metrics.
     metrics = relationship("DailyMetric", back_populates="user")
+    # Relation avec Notification - un user a plusieurs notifications.
+    notifications = relationship("Notification", back_populates="user")
