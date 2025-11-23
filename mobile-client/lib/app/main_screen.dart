@@ -86,37 +86,64 @@ class _MainScreenState extends State<MainScreen> {
 
         return Scaffold(
           body: _screens[_selectedIndex],
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            selectedItemColor: AppTheme.primaryColor,
-            unselectedItemColor: AppTheme.textSecondary,
-            backgroundColor: AppTheme.surfaceColor,
-            type: BottomNavigationBarType.fixed,
-            selectedLabelStyle: Theme.of(context).textTheme.bodyMedium,
-            unselectedLabelStyle: Theme.of(context).textTheme.bodyMedium,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard),
-                label: 'Dashboard',
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              selectedItemColor: AppTheme.primaryColor,
+              unselectedItemColor: AppTheme.textSecondary,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              type: BottomNavigationBarType.fixed,
+              selectedLabelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.insights),
-                label: 'Insights',
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history),
-                label: 'Historique',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bar_chart),
-                label: 'Graphiques',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profil',
-              ),
-            ],
+              selectedIconTheme: const IconThemeData(size: 26),
+              unselectedIconTheme: const IconThemeData(size: 24),
+              items: List.generate(5, (index) {
+                final icons = [
+                  [Icons.dashboard, Icons.dashboard_outlined],
+                  [Icons.insights, Icons.insights_outlined],
+                  [Icons.history, Icons.history_outlined],
+                  [Icons.bar_chart, Icons.bar_chart_outlined],
+                  [Icons.person, Icons.person_outline],
+                ];
+                final labels = ['Dashboard', 'Insights', 'Historique', 'Graphiques', 'Profil'];
+                final isSelected = _selectedIndex == index;
+                
+                return BottomNavigationBarItem(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: isSelected
+                        ? BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          )
+                        : null,
+                    child: Icon(
+                      isSelected ? icons[index][0] : icons[index][1],
+                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    ),
+                  ),
+                  label: labels[index],
+                );
+              }),
+            ),
           ),
         );
       },

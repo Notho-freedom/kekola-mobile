@@ -5,20 +5,42 @@ import 'package:namer_app/features/notifications/notifications_screen.dart';
 
 
 class AppTheme {
-  // Couleurs principales - Palette professionnelle et attractive
-  static const Color primaryColor = Color(0xFF2E7D32); // Vert professionnel
-  static const Color secondaryColor = Color(0xFF4CAF50); // Vert clair
-  static const Color accentColor = Color(0xFF00C853); // Vert vif
-  static const Color backgroundColor = Color(0xFFF5F5F5); // Fond léger
+  // Couleurs principales - Palette moderne avec gradients
+  static const Color primaryColor = Color(0xFF6366F1); // Indigo moderne
+  static const Color primaryDark = Color(0xFF4F46E5); // Indigo foncé
+  static const Color primaryLight = Color(0xFF818CF8); // Indigo clair
+  static const Color secondaryColor = Color(0xFF8B5CF6); // Violet
+  static const Color accentColor = Color(0xFF06B6D4); // Cyan vif
+  static const Color backgroundColor = Color(0xFFF8FAFC); // Fond très léger
   static const Color surfaceColor = Color(0xFFFFFFFF); // Surface des cartes
-  static const Color errorColor = Color(0xFFD32F2F); // Rouge d'erreur
-  static const Color warningColor = Color(0xFFFFA000); // Orange d'avertissement
-  static const Color successColor = Color(0xFF388E3C); // Vert de succès
+  static const Color errorColor = Color(0xFFEF4444); // Rouge moderne
+  static const Color warningColor = Color(0xFFF59E0B); // Orange moderne
+  static const Color successColor = Color(0xFF10B981); // Vert moderne
+  static const Color infoColor = Color(0xFF3B82F6); // Bleu info
+
+  // Gradients modernes
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF06B6D4)],
+  );
+  
+  static const LinearGradient successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF34D399)],
+  );
+  
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+  );
 
   // Texte avec contraste élevé (WCAG AA)
-  static const Color textPrimary = Color(0xFF212121);
-  static const Color textSecondary = Color(0xFF757575);
-  static const Color textDisabled = Color(0xFF9E9E9E);
+  static const Color textPrimary = Color(0xFF0F172A); // Presque noir moderne
+  static const Color textSecondary = Color(0xFF64748B); // Gris moderne
+  static const Color textDisabled = Color(0xFF94A3B8); // Gris clair
 
   // Thème clair principal
   static final ThemeData lightTheme = ThemeData(
@@ -91,23 +113,28 @@ class AppTheme {
       ),
     ),
     
-    // Composants Material Design
-    appBarTheme: const AppBarTheme(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
-      elevation: 4,
+    // Composants Material Design modernisés
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       centerTitle: true,
-      titleTextStyle: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: textPrimary,
+        letterSpacing: -0.5,
       ),
+      iconTheme: const IconThemeData(color: textPrimary),
     ),
     
     cardTheme: CardThemeData(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.all(8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.grey.shade100, width: 1),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: surfaceColor,
     ),
     
     buttonTheme: const ButtonThemeData(
@@ -119,41 +146,61 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
         textStyle: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+      ),
+    ),
+    
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
       ),
     ),
     
     inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade50,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: textDisabled),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: textDisabled),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: primaryColor, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: errorColor),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: errorColor, width: 1),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       labelStyle: const TextStyle(
         fontSize: 14,
         color: textSecondary,
+        fontWeight: FontWeight.w500,
       ),
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         fontSize: 14,
-        color: textDisabled,
+        color: Colors.grey.shade400,
       ),
     ),
   );
@@ -188,63 +235,106 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       leading: showBackButton
           ? IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.arrow_back_ios_new, size: 18),
+              ),
               onPressed: () => Navigator.pop(context),
             )
           : Padding(
-              padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                
-                padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Container(
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 203, 206, 17),
-                  borderRadius: BorderRadius.circular(8),
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Icon(
-                  
                   Icons.account_balance_wallet_rounded,
                   color: Colors.white,
-                  size: 20,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 8),
-            
-          
-            ],
-          ),
-
             ),
-      title: Text(title),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+      ),
       actions: [
-        // Avatar avec initiale
+        // Icône de notification moderne
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications_outlined, size: 24),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.errorColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+              );
+            },
+          ),
+        ),
+        // Avatar avec gradient
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: CircleAvatar(
-            radius: 16,
-            backgroundColor: AppTheme.primaryColor,
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'A',
-              style: const TextStyle(
-                color: Color.fromARGB(255, 236, 11, 11),
-
-                fontSize: 27,
-                fontWeight: FontWeight.bold,
+          padding: const EdgeInsets.only(right: 16.0),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.transparent,
+              child: Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : 'A',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
-        // Icône de notification
-        IconButton(
-          icon: const Icon(Icons.notifications),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-            );
-          },
         ),
       ],
     );

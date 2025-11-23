@@ -2,29 +2,60 @@
 // Service pour communiquer avec l'API backend
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // URL de base de l'API - Détection automatique selon la plateforme
-  // Pour Web : http://localhost:8000
-  // Pour Android Emulator : http://10.0.2.2:8000
-  // Pour iOS Simulator : http://localhost:8000
-  // Pour appareil physique : http://VOTRE_IP_LOCALE:8000
-  static String get baseUrl {
-    if (kIsWeb) {
-      // Mode Web : utiliser localhost
-      return 'http://localhost:8000';
-    } else {
-      // Pour mobile, utiliser 10.0.2.2 pour Android, localhost pour iOS
-      // Vous pouvez modifier cette valeur selon votre configuration
-      // Pour Android Emulator, décommentez la ligne suivante :
-      // return 'http://10.0.2.2:8000';
-      // Pour tester sur appareil physique, utilisez votre IP locale :
-      // return 'http://192.168.1.XXX:8000';
-      return 'http://localhost:8000';
+  // URL de base de l'API - Détection automatique selon l'environnement
+  // Production : https://kekola-mobile.onrender.com
+  // Développement : http://localhost:8000 (local) ou http://10.0.2.2:8000 (Android emulator)
+  
+  static const String _productionUrl = 'https://kekola-mobile.onrender.com';
+  static const String _devUrlWeb = 'http://localhost:8000';
+  static const String _devUrlAndroid = 'http://10.0.2.2:8000';
+  static const String _baseUrlKey = 'api_base_url';
+  
+  // Détecte l'URL du backend de manière dynamique
+  static Future<String> get baseUrl async {
+    // Vérifier si une URL personnalisée est stockée
+    final prefs = await SharedPreferences.getInstance();
+    final savedUrl = prefs.getString(_baseUrlKey);
+    
+    if (savedUrl != null && savedUrl.isNotEmpty) {
+      return savedUrl;
     }
+    
+    // Détection automatique de l'environnement
+    // En production (build release), utiliser l'URL de production
+    // En développement (debug), utiliser localhost ou l'emulator
+    
+    // kDebugMode est false en mode release/profile
+    if (!kDebugMode) {
+      // Mode production - utiliser l'URL Render
+      return _productionUrl;
+    }
+    
+    // Mode développement
+    if (kIsWeb) {
+      return _devUrlWeb;
+    } else {
+      // Pour mobile, essayer de détecter si on est sur un emulator Android
+      // Par défaut, utiliser localhost (iOS simulator ou appareil physique)
+      return _devUrlAndroid;
+    }
+  }
+  
+  // Permet de définir manuellement l'URL du backend
+  static Future<void> setBaseUrl(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_baseUrlKey, url);
+  }
+  
+  // Réinitialise l'URL à la détection automatique
+  static Future<void> resetBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_baseUrlKey);
   }
   
   // Clé pour stocker le token dans SharedPreferences
@@ -99,8 +130,9 @@ class ApiService {
   /// Retourne les tokens (access_token, refresh_token)
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
+      final url = await baseUrl;
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
+        Uri.parse('$url/login'),
         headers: await _getHeaders(includeAuth: false),
         body: json.encode({
           'email': email,
@@ -125,8 +157,9 @@ class ApiService {
   /// Inscription utilisateur
   static Future<Map<String, dynamic>> register(String email, String password, String name) async {
     try {
+      final url = await baseUrl;
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
+        Uri.parse('$url/register'),
         headers: await _getHeaders(includeAuth: false),
         body: json.encode({
           'email': email,
@@ -161,8 +194,9 @@ class ApiService {
         throw Exception('Aucun refresh token disponible');
       }
 
+      final url = await baseUrl;
       final response = await http.post(
-        Uri.parse('$baseUrl/refresh'),
+        Uri.parse('$url/refresh'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $refreshToken',
@@ -198,8 +232,9 @@ class ApiService {
     String source = 'APP',
   }) async {
     try {
+      final url = await baseUrl;
       final response = await http.post(
-        Uri.parse('$baseUrl/v1/metrics'),
+        Uri.parse('$url/v1/metrics'),
         headers: await _getHeaders(),
         body: json.encode({
           'date': date,
@@ -227,8 +262,9 @@ class ApiService {
   /// range: "10d" pour 10 jours, "30d" pour 30 jours, etc.
   static Future<List<dynamic>> getMetrics({String range = '10d'}) async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/v1/metrics?range=$range'),
+        Uri.parse('$url/v1/metrics?range=$range'),
         headers: await _getHeaders(),
       );
 
@@ -251,8 +287,9 @@ class ApiService {
   /// date: Format ISO "YYYY-MM-DD"
   static Future<Map<String, dynamic>> getInsights(String date) async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/v1/insights?date=$date'),
+        Uri.parse('$url/v1/insights?date=$date'),
         headers: await _getHeaders(),
       );
 
@@ -288,8 +325,9 @@ class ApiService {
   /// Récupère le profil de l'utilisateur connecté
   static Future<Map<String, dynamic>> getCurrentUser() async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/user/me'),
+        Uri.parse('$url/user/me'),
         headers: await _getHeaders(),
       );
 
@@ -317,8 +355,9 @@ class ApiService {
       if (email != null) body['email'] = email;
       if (password != null) body['password'] = password;
 
+      final url = await baseUrl;
       final response = await http.put(
-        Uri.parse('$baseUrl/user/me'),
+        Uri.parse('$url/user/me'),
         headers: await _getHeaders(),
         body: json.encode(body),
       );
@@ -340,8 +379,9 @@ class ApiService {
   /// Récupère les statistiques du dashboard
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/v1/dashboard'),
+        Uri.parse('$url/v1/dashboard'),
         headers: await _getHeaders(),
       );
 
@@ -360,8 +400,9 @@ class ApiService {
   /// Récupère les données pour les graphiques
   static Future<Map<String, dynamic>> getGraphData() async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/v1/graphs'),
+        Uri.parse('$url/v1/graphs'),
         headers: await _getHeaders(),
       );
 
@@ -382,8 +423,9 @@ class ApiService {
   /// Récupère les notifications de l'utilisateur
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     try {
+      final url = await baseUrl;
       final response = await http.get(
-        Uri.parse('$baseUrl/notifications'),
+        Uri.parse('$url/notifications'),
         headers: await _getHeaders(),
       );
 
@@ -403,8 +445,9 @@ class ApiService {
   /// Marque une notification comme lue
   static Future<void> markNotificationAsRead(int notificationId) async {
     try {
+      final url = await baseUrl;
       final response = await http.put(
-        Uri.parse('$baseUrl/notifications/$notificationId/read'),
+        Uri.parse('$url/notifications/$notificationId/read'),
         headers: await _getHeaders(),
       );
 
@@ -422,8 +465,9 @@ class ApiService {
   /// Marque toutes les notifications comme lues
   static Future<void> markAllNotificationsAsRead() async {
     try {
+      final url = await baseUrl;
       final response = await http.put(
-        Uri.parse('$baseUrl/notifications/read-all'),
+        Uri.parse('$url/notifications/read-all'),
         headers: await _getHeaders(),
       );
 
